@@ -22,7 +22,7 @@ st.set_page_config(page_title="Visualisations Avancées", page_icon="📈", layo
 
 @st.cache_data
 def load_data():
-    return pd.read_excel('D:/ADE/cereale/Agri/base_finale.xlsx')
+    return pd.read_excel('base_finale.xlsx')
 
 def create_advanced_visualizations(df):
     """Crée des visualisations avancées et interactives"""

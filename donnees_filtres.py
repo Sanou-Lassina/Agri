@@ -6,7 +6,7 @@ from datetime import datetime
 @st.cache_data
 def load_data():
     try:
-        df = pd.read_excel('D:/ADE/cereale/Agri/base_finale.xlsx')
+        df = pd.read_excel('base_finale.xlsx')
         st.success("✅ Données chargées avec succès")
         return df
     except Exception as e:
