@@ -228,6 +228,7 @@ def render_header():
             <div style="text-align: center; padding: 0.5rem;">
                 <span style="font-size: 3em;">🌾</span>
             </div>
+            <p class="subtitle">Realiser par Lassina SANOU, Stagiaire chez ADE</p>
             """, unsafe_allow_html=True)
     
     st.markdown("---")
