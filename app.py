@@ -1,5 +1,8 @@
 import streamlit as st
 
+# Configuration pour le mode Wide
+st.set_page_config(layout="wide")
+
 # CSS personnalisé pour un design agricole professionnel
 st.markdown("""
 <style>
@@ -211,10 +214,9 @@ def render_header():
         <div class="header-container">
             <div class="header-content">
                 <div class="logo-title">
-                    <div class="logo-icon">🌾</div>
-                    <h1 class="main-title">AGRI ANALYTICS BF</h1>
+                    <h1 class="main-title">🌾AGRI ANALYTICS BF🌾</h1>
                 </div>
-                <p class="subtitle">Plateforme Intelligente d'Analyse du Rendement Céréalier</p>
+                <p class="subtitle">Solution Intégrée de Monitoring Agricole : Analyse Historique, Prédictions en Temps Réel et Recommandations Personnalisées- par Machine Learning pour les Cultures Céréalières</p>
                 <div class="tagline">Burkina Faso</div>
             </div>
         </div>

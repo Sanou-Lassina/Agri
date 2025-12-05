@@ -2,6 +2,10 @@ import streamlit as st
 from PIL import Image
 import base64
 
+
+# Configuration pour le mode Wide
+st.set_page_config(layout="wide")
+
 def show():
     # CSS personnalisé pour une apparence professionnelle
     st.markdown("""
@@ -114,7 +118,7 @@ def show():
     with col2:
         st.markdown("""
         <div class="feature-card">
-            <h4>🔮 Prédictions IA</h4>
+            <h4>🔮 Prédictions</h4>
             <p>Modèles de machine learning pour estimer les rendements futurs</p>
         </div>
         """, unsafe_allow_html=True)

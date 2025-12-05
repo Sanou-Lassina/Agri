@@ -63,51 +63,203 @@ def create_advanced_visualizations(df):
         return
     
     # Layout en onglets avancés
-    tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
+    tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
         "📈 Évolutions Temporelles", 
         "🌡️ Impact Climatique", 
-        "📊 Analyses Spatiales",
         "🔗 Corrélations Avancées",
         "📦 Analyse Multivariée",
         "📋 Tableaux de Bord",
-        "🤖 Modélisation"
+        "🤖 Rélation Linéaire"
     ])
     
     with tab1:
         st.header("📈 Analyses Temporelles Avancées")
 
+        # Filtrage des données basé sur les sélections de l'utilisateur
+        df_filtre = df.copy()
+        
+        # Application des filtres
+        if regions:
+            df_filtre = df_filtre[df_filtre['Région'].isin(regions)]
+        
+        if cereales:
+            df_filtre = df_filtre[df_filtre['Céréale'].isin(cereales)]
+        
+        df_filtre = df_filtre[
+            (df_filtre['Année'] >= annees[0]) & 
+            (df_filtre['Année'] <= annees[1])
+        ]
+        
+        # Conversion de la variable de productivité en nom de colonne
+        var_map = {
+            'Production': 'Production',
+            'Superficie': 'Superficie',
+            'Rendement': 'Rendement'
+        }
+        
+        colonne_productivite = var_map[var_productivite]
+        
+        # Vérification que les données filtrées ne sont pas vides
+        if df_filtre.empty:
+            st.warning("⚠️ Aucune donnée disponible avec les filtres sélectionnés.")
+            st.stop()
+        
         # Évolution temporelle interactive
-        st.subheader(f"Évolution de {var_productivite}")
+        st.subheader(f"Évolution de la {var_productivite.lower()}")
             
         fig_temp = px.line(
-                df_filtre.groupby(['Année', 'Céréale', 'Région'])[var_productivite].mean().reset_index(),
-                x='Année',
-                y=var_productivite,
-                color='Céréale',
-                line_dash='Région',
-                title=f'Évolution de {var_productivite}',
-                markers=True,
-                template='plotly_white'
+            df_filtre.groupby(['Année', 'Céréale', 'Région'])[colonne_productivite].mean().reset_index(),
+            x='Année',
+            y=colonne_productivite,
+            color='Céréale',
+            line_dash='Région',
+            title=f'Évolution de la {var_productivite.lower()} par région et céréale',
+            markers=True,
+            template='plotly_white'
         )
-            
+        
+        # Bouton pour afficher/masquer les tendances
+        show_trend = st.checkbox("Afficher les lignes de tendance", value=True)
+        
         if show_trend:
-                for trace in fig_temp.data:
-                    if trace.type == 'scatter':
-                        # Ajouter une ligne de tendance
-                        x_data = trace.x
-                        y_data = trace.y
-                        z = np.polyfit(range(len(x_data)), y_data, 1)
-                        p = np.poly1d(z)
-                        fig_temp.add_trace(go.Scatter(
-                            x=x_data,
-                            y=p(range(len(x_data))),
-                            mode='lines',
-                            line=dict(dash='dash', color=trace.line.color),
-                            name=f'Tendance {trace.name}',
-                            showlegend=False
-                        ))
+            for trace in fig_temp.data:
+                if trace.type == 'scatter':
+                    # Ajouter une ligne de tendance
+                    x_data = trace.x
+                    y_data = trace.y
+                    z = np.polyfit(range(len(x_data)), y_data, 1)
+                    p = np.poly1d(z)
+                    fig_temp.add_trace(go.Scatter(
+                        x=x_data,
+                        y=p(range(len(x_data))),
+                        mode='lines',
+                        line=dict(dash='dash', color=trace.line.color),
+                        name=f'Tendance {trace.name}',
+                        showlegend=False
+                    ))
             
         st.plotly_chart(fig_temp, use_container_width=True)
+
+        # NOUVEAUX GRAPHIQUES AJOUTÉS
+        
+        # Création de colonnes pour organiser les nouveaux graphiques
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.subheader(f"📊 {var_productivite} Totale par Année")
+            
+            # Agrégation des données par année
+            if var_productivite == 'Production':
+                colonne_agregation = 'Production'
+                unite = "Tonnes"
+            elif var_productivite == 'Superficie':
+                colonne_agregation = 'Superficie'
+                unite = "Hectares"
+            else:  # Rendement
+                colonne_agregation = 'Rendement'
+                unite = "Kg/Ha"
+            
+            productivite_annuelle = df_filtre.groupby('Année')[colonne_agregation].sum().reset_index()
+            
+            fig_bar_annuelle = px.bar(
+                productivite_annuelle,
+                x='Année',
+                y=colonne_agregation,
+                title=f'{var_productivite} Totale par Année',
+                color_discrete_sequence=['#2E86AB'],
+                template='plotly_white',
+                text=colonne_agregation
+            )
+            
+            # Amélioration du format des textes
+            fig_bar_annuelle.update_traces(
+                texttemplate='%{text:,.0f}',
+                textposition='outside' if len(productivite_annuelle) < 15 else 'auto',
+                marker=dict(line=dict(color='darkblue', width=1))
+            )
+            
+            fig_bar_annuelle.update_layout(
+                xaxis_title="Année",
+                yaxis_title=f"{var_productivite} ({unite})",
+                yaxis=dict(tickformat=",.0f"),
+                height=500
+            )
+            
+            st.plotly_chart(fig_bar_annuelle, use_container_width=True)
+            
+            # Ajout de statistiques sous le graphique
+            if not productivite_annuelle.empty and len(productivite_annuelle) > 1:
+                col_stats1, col_stats2, col_stats3 = st.columns(3)
+                with col_stats1:
+                    st.metric(
+                        label=f"{var_productivite} Moyenne",
+                        value=f"{productivite_annuelle[colonne_agregation].mean():,.0f} {unite}"
+                    )
+                with col_stats2:
+                    st.metric(
+                        label=f"{var_productivite} Maximale",
+                        value=f"{productivite_annuelle[colonne_agregation].max():,.0f} {unite}"
+                    )
+                with col_stats3:
+                    croissance = ((productivite_annuelle[colonne_agregation].iloc[-1] - 
+                                productivite_annuelle[colonne_agregation].iloc[0]) / 
+                                productivite_annuelle[colonne_agregation].iloc[0] * 100)
+                    st.metric(
+                        label="Taux de Croissance",
+                        value=f"{croissance:.1f}%"
+                    )
+        
+        with col2:
+            st.subheader(f"Répartition par Type de Céréale")
+            
+            # Agrégation par type de céréale (moyenne sur la période)
+            if var_productivite == 'Rendement':
+                # Pour le rendement, on calcule la moyenne pondérée
+                productivite_cereale = df_filtre.groupby('Céréale').apply(
+                    lambda x: (x['Production'].sum() / x['Superficie'].sum() * 1000)
+                    if x['Superficie'].sum() > 0 else 0
+                ).reset_index(name='Rendement')
+                colonne_affichage = 'Rendement'
+            else:
+                productivite_cereale = df_filtre.groupby('Céréale')[colonne_agregation].mean().reset_index()
+                colonne_affichage = colonne_agregation
+            
+            productivite_cereale = productivite_cereale.sort_values(colonne_affichage, ascending=False)
+            
+            fig_bar_cereale = px.bar(
+                productivite_cereale,
+                x='Céréale',
+                y=colonne_affichage,
+                title=f'{var_productivite} Moyenne par Type de Céréale',
+                color='Céréale',
+                color_discrete_sequence=px.colors.qualitative.Set2,
+                template='plotly_white',
+                text=colonne_affichage
+            )
+            
+            fig_bar_cereale.update_traces(
+                texttemplate='%{text:,.0f}',
+                textposition='outside'
+            )
+            
+            fig_bar_cereale.update_layout(
+                xaxis_title="Type de Céréale",
+                yaxis_title=f"{var_productivite} Moyenne ({unite})",
+                yaxis=dict(tickformat=",.0f"),
+                showlegend=False,
+                height=500
+            )
+            
+            st.plotly_chart(fig_bar_cereale, use_container_width=True)
+            
+            # Ajout de statistiques sous le graphique
+            if not productivite_cereale.empty:
+                cereale_dominante = productivite_cereale.iloc[0]
+                cereale_minoritaire = productivite_cereale.iloc[-1]
+                
+                st.info(f"**💡 Insight** : {cereale_dominante['Céréale']} présente la {var_productivite.lower()} "
+                    f"moyenne la plus élevée ({cereale_dominante[colonne_affichage]:,.0f} {unite}).")
+        
         
         # Saisonnalité et décomposition
         st.subheader("Analyse de Saisonnalité")
@@ -183,71 +335,9 @@ def create_advanced_visualizations(df):
         if not extreme_data.empty:
             st.write(f"Données supérieures au {100-extreme_threshold}ème percentile:")
             st.dataframe(extreme_data[['Région', 'Céréale', 'Année', var_productivite]].head(10))
+
     
     with tab3:
-        st.header("📊 Analyses Spatiales et Comparatives")
-        
-        # Cartographie interactive
-        st.subheader("📌 Cartographie des Performances")
-        
-        # Préparation des données pour la carte (exemple simplifié)
-        df_map = df_filtre.groupby('Région').agg({
-            'Production': 'mean',
-            'Rendement': 'mean',
-            'Superficie': 'mean'
-        }).reset_index()
-        
-        # Créer une carte choroplèthe (exemple avec données géographiques simulées)
-        fig_map = px.choropleth(
-            df_map,
-            locations='Région',
-            locationmode='country names',  # À adapter selon vos données
-            color='Production',
-            hover_name='Région',
-            hover_data=['Rendement', 'Superficie'],
-            title="Production Moyenne par Région",
-            color_continuous_scale="Viridis",
-            template='plotly_white'
-        )
-        st.plotly_chart(fig_map, use_container_width=True)
-        
-        # Comparaisons multiples
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            st.subheader("Comparaison Régionale")
-            fig_radar = go.Figure()
-            
-            for cereale in cereales[:3]:  # Limiter à 3 céréales pour la lisibilité
-                cereale_data = df_filtre[df_filtre['Céréale'] == cereale]
-                regional_avg = cereale_data.groupby('Région')[var_productivite].mean()
-                
-                fig_radar.add_trace(go.Scatterpolar(
-                    r=regional_avg.values,
-                    theta=regional_avg.index,
-                    fill='toself',
-                    name=cereale
-                ))
-            
-            fig_radar.update_layout(
-                polar=dict(radialaxis=dict(visible=True)),
-                showlegend=True,
-                title=f"Comparaison Régionale - {var_productivite}"
-            )
-            st.plotly_chart(fig_radar, use_container_width=True)
-        
-        with col2:
-            st.subheader("Distribution Cumulative")
-            fig_cumulative = px.ecdf(
-                df_filtre,
-                x=var_productivite,
-                color='Céréale',
-                title=f"Distribution Cumulative de {var_productivite}",
-                template='plotly_white'
-            )
-            st.plotly_chart(fig_cumulative, use_container_width=True)
-    
-    with tab4:
         st.header("🔗 Analyses de Corrélation Avancées")
         
         # Matrice de corrélation interactive
@@ -288,7 +378,7 @@ def create_advanced_visualizations(df):
             )
             st.plotly_chart(fig_pair, use_container_width=True)
     
-    with tab5:
+    with tab4:
         st.header("📦 Analyse Multivariée Avancée")
         
         # Analyse en composantes principales (PCA)
@@ -337,7 +427,7 @@ def create_advanced_visualizations(df):
                 fig_loading.update_traces(textposition='top center')
                 st.plotly_chart(fig_loading, use_container_width=True)
     
-    with tab6:
+    with tab5:
         st.header("📋 Tableaux de Bord Interactifs")
         
         # KPI principaux
@@ -390,8 +480,8 @@ def create_advanced_visualizations(df):
         st.subheader("📈 Résumé Statistique Complet")
         st.dataframe(df_filtre.describe().style.format("{:.2f}"))
     
-    with tab7:
-        st.header("🤖 Modélisation Prédictive Simple")
+    with tab6:
+        st.header("Rélation Prédictive Simple")
         
         st.info("Cette section propose des modèles prédictifs basiques pour explorer les relations dans vos données.")
         

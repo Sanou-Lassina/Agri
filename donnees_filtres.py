@@ -172,25 +172,37 @@ def show():
                 
                 # Export des données
                 st.subheader("💾 Export des Données")
-                
+
                 col_export1, col_export2 = st.columns([2, 1])
-                
+
                 with col_export1:
                     st.info("Téléchargez les données filtrées au format Excel")
-                
-                with col_export2:
-                    output = io.BytesIO()
-                    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
-                        df_filtre.to_excel(writer, index=False, sheet_name='Données filtrées')
-                        data = output.getvalue()
 
-                    st.download_button(
-                        label="📥 Télécharger Excel",
-                        data=data,
-                        file_name=f'donnees_filtrees_{datetime.now().strftime("%Y%m%d_%H%M")}.xlsx',
-                        mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-                        use_container_width=True
-                    )
+                with col_export2:
+                    if df_filtre.empty:
+                        st.warning("⚠️ Aucune donnée à exporter")
+                    else:
+                        # Créer un buffer en mémoire
+                        buffer = io.BytesIO()
+                        
+                        # Utiliser pandas pour créer le fichier Excel
+                        with pd.ExcelWriter(buffer, engine='xlsxwriter') as writer:
+                            # Écrire les données
+                            df_filtre.to_excel(writer, index=False, sheet_name='Données filtrées')
+                            
+                            # Fermer le writer
+                            writer.close()
+                        
+                        # Se déplacer au début du buffer
+                        buffer.seek(0)
+                        
+                        st.download_button(
+                            label=f"📥 Télécharger Excel ({len(df_filtre)} lignes)",
+                            data=buffer,
+                            file_name=f'donnees_filtrees_{datetime.now().strftime("%Y%m%d_%H%M%S")}.xlsx',
+                            mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                            use_container_width=True
+                        )
         
         except Exception as e:
             st.error(f"❌ Erreur lors du filtrage des données: {e}")
