@@ -224,7 +224,7 @@ def render_header():
         
     with col2:
         try:
-            st.image("ade.jpg", width=800)
+            st.image("ade.jpg", width=500)
         except FileNotFoundError:
             st.markdown("""
             <div style="text-align: center; padding: 0.5rem;">

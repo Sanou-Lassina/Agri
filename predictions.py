@@ -54,27 +54,27 @@ def show():
         
         region = st.selectbox("Région", 
                             ['Sahel', 'Centre', 'Boucle du Mouhoun', 'Centre-Sud', 
-                             'Centre-Nord', 'Hauts-Bassins', 'Cascades', 'Plateau Centrale',
-                             'Est', 'Centre-Ouest', 'Nord', 'Sud-Ouest'])
+                            'Centre-Nord', 'Hauts-Bassins', 'Cascades', 'Plateau Centrale',
+                            'Est', 'Centre-Ouest', 'Nord', 'Sud-Ouest'])
         
         cereale = st.selectbox("Type de Céréale", 
-                             ['Arachide', 'Coton', 'Maïs', 'Mil', 'Nebié', 'Riz', 'Sorgho'])
+                            ['Arachide', 'Coton', 'Maïs', 'Mil', 'Nebié', 'Riz', 'Sorgho'])
         
         annee = st.number_input("Année de projection", 
-                              min_value=2023, max_value=2030, value=2023)
+                            min_value=2023, max_value=2030, value=2023)
         
         superficie = st.number_input("Superficie cultivée (ha)", 
-                                   min_value=0.0, value=1000.0, step=100.0)
+                                min_value=0.0, value=100000.0, step=500.0)
     
     with col2:
         st.subheader("🌤️ Conditions Climatiques")
         
-        temperature = st.slider("Température Moyenne (°C)", 15.0, 40.0, 30.0, 0.5)
-        precipitation = st.slider("Précipitation (mm)", 0.0, 1000.0, 200.0, 10.0)
-        nb_jour_pluie = st.slider("Nombre de Jours de Pluie", 0, 100, 7)
-        humidite = st.slider("Humidité Moyenne (%)", 0.0, 100.0, 65.0, 1.0)
-        vent = st.slider("Vitesse du Vent (km/h)", 0.0, 50.0, 22.0, 1.0)
-        ensoleillement = st.slider("Durée d'Ensoleillement (h/jour)", 0.0, 12.0, 6.0, 0.5)
+        temperature = st.slider("Température moyenne annuelle (°C)", 15.0, 40.0, 30.0, 0.5)
+        precipitation = st.slider("Précipitations moyennes annuelles (mm)", 0.0, 1000.0, 200.0, 10.0)
+        nb_jour_pluie = st.slider("Nombre de jour moyen annuel de pluie", 0, 360, 80)
+        humidite = st.slider("Humidité relative moyenne annuelle (%)", 0.0, 100.0, 65.0, 1.0)
+        vent = st.slider("Vitèsse du vent moyen annuel (km/h)", 0.0, 50.0, 22.0, 1.0)
+        ensoleillement = st.slider("Durée moyenne d'ensoleillement (heures/jour)", 0.0, 12.0, 6.0, 0.5)
     
     # Bouton de prédiction
     if st.button("🎯 Calculer la Prédiction", type="primary", use_container_width=True):
@@ -95,95 +95,86 @@ def show():
         try:
             # Prédiction
             prediction = model.predict(input_data)
-            rendement_pred = prediction[0]
-            production_totale = rendement_pred * superficie
+            production_totale_region = prediction[0]  # Production totale prédite pour la région (en tonnes)
             
-            # Affichage des résultats
-            st.markdown(f"""
-            <div class="prediction-card">
-                <h2>📊 Résultats de la Prédiction</h2>
-                <div style="font-size: 2.5rem; font-weight: bold; margin: 1rem 0;">
-                    {rendement_pred:.2f} tonnes/ha
-                </div>
-                <div style="font-size: 1.2rem;">
-                    Production totale estimée : {production_totale:,.0f} tonnes
-                </div>
-            </div>
+            # Calcul du rendement par hectare
+            rendement_par_ha = production_totale_region / superficie if superficie > 0 else 0
+            
+            # Ajout de styles CSS supplémentaires
+            st.markdown("""
+            <style>
+            .metric-card {
+                background: white;
+                padding: 1.5rem;
+                border-radius: 10px;
+                box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+                text-align: center;
+                margin: 0.5rem;
+            }
+            .metric-value {
+                font-size: 2rem;
+                font-weight: bold;
+                color: #2E86AB;
+                margin: 0.5rem 0;
+            }
+            .metric-label {
+                font-size: 1rem;
+                color: #666;
+                margin-bottom: 0.5rem;
+            }
+            .comparison-positive {
+                color: #28a745;
+                font-weight: bold;
+            }
+            .comparison-negative {
+                color: #dc3545;
+                font-weight: bold;
+            }
+            </style>
             """, unsafe_allow_html=True)
             
-            # Métriques supplémentaires
-            col1, col2, col3 = st.columns(3)
+            # Section principale des résultats
+            st.markdown('<div class="section-header">📊 Résultats de la Prédiction</div>', unsafe_allow_html=True)
+            
+            
+            # Métriques principales dans un tableau
+            col1, col2 = st.columns(2)
             
             with col1:
-                st.metric("Rendement Prédit", f"{rendement_pred:.2f} t/ha")
+                st.markdown(f"""
+                <div class="metric-card">
+                    <div class="metric-label">Production prédit de la région estimé</div>
+                    <div class="metric-value">{production_totale_region:.2f}</div>
+                    <div>tonnes</div>
+                </div>
+                """, unsafe_allow_html=True)
             
             with col2:
-                st.metric("Production Totale", f"{production_totale:,.0f} t")
+                st.markdown(f"""
+                <div class="metric-card">
+                    <div class="metric-label">Rendement de la région estimé</div>
+                    <div class="metric-value">{rendement_par_ha:.2f}</div>
+                    <div>tonnes/ha</div>
+                </div>
+                """, unsafe_allow_html=True)
             
-            with col3:
-                # Comparaison avec moyenne hypothétique
-                moyenne_nationale = 2.5  # À adapter avec vos données réelles
-                ratio = rendement_pred / moyenne_nationale
-                st.metric("Vs Moyenne Nationale", f"{ratio:.1f}x")
-            
-            # Graphique d'impact (exemple)
-            st.subheader("📈 Facteurs d'Influence")
-            
-            # Ces valeurs seraient normalement calculées à partir du modèle
-            facteurs = {
-                'Précipitations': 0.35,
-                'Température': 0.25,
-                'Humidité': 0.15,
-                'Ensoleillement': 0.10,
-                'Vent': 0.08,
-                'Jours Pluie': 0.07
-            }
-            
-            fig = px.bar(
-                x=list(facteurs.keys()),
-                y=list(facteurs.values()),
-                title="Impact relatif des facteurs climatiques",
-                labels={'x': 'Facteurs', 'y': 'Importance'},
-                color=list(facteurs.values()),
-                color_continuous_scale='Viridis'
-            )
-            st.plotly_chart(fig, use_container_width=True)
-            
-            # Téléchargement des résultats
-            result_df = pd.DataFrame({
-                'Date_Prédiction': [datetime.now()],
-                'Région': [region],
-                'Céréale': [cereale],
-                'Année': [annee],
-                'Superficie_ha': [superficie],
-                'Rendement_Prédit_tonnes_ha': [rendement_pred],
-                'Production_Totale_tonnes': [production_totale],
-                'Température_C': [temperature],
-                'Précipitation_mm': [precipitation]
-            })
-            
-            st.download_button(
-                label="📥 Télécharger les Résultats",
-                data=result_df.to_csv(index=False, sep=';').encode('utf-8'),
-                file_name=f"prediction_rendement_{datetime.now().strftime('%Y%m%d_%H%M')}.csv",
-                mime='text/csv',
-                use_container_width=True
-            )
             
         except Exception as e:
             st.error(f"❌ Erreur lors de la prédiction : {str(e)}")
+            st.error("Veuillez vérifier les données d'entrée et réessayer.")
     
-    # Informations complémentaires
-    with st.expander("ℹ️ Informations sur le modèle"):
-        st.markdown("""
-        **Caractéristiques du modèle :**
-        - Algorithme : Random Forest
-        - Période d'entraînement : 1996-2022
-        - Variables utilisées : 10 paramètres climatiques et agronomiques
-        - Performance : R² = 0.85 (sur les données de test)
+    with st.expander("ℹ️ À propos de ces résultats"):
+        st.markdown(f"""
+        **Interprétation des résultats :**
         
-        **Limitations :**
-        - Les prédictions sont des estimations statistiques
-        - Ne capture pas les événements climatiques extrêmes
-        - Doit être interprété avec les connaissances agronomiques locales
+        Cette prédiction fournit une **estimation régionale** du rendement de **{cereale}** dans la région 
+        **{region}** pour l'année **{annee}**, basée sur les paramètres climatiques que vous avez saisis.
+        
+        **Points clés :**
+        - ✅ **Prédiction régionale** : Spécifique à {region}
+        - ✅ **Basée sur le climat** : Intègre température ({temperature}°C), précipitations ({precipitation}mm), etc.
+        - ✅ **Modèle statistique** : Entraîné sur données historiques 1996-2022
+        - ⚠️ **Estimation** : À utiliser pour la planification, pas comme garantie
+        
+        **Utilisation recommandée :** Planification agricole, estimation des besoins en intrants, projection des récoltes.
         """)
